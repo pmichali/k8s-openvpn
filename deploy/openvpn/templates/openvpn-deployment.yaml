@@ -28,15 +28,6 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
         {{- end }}
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: lifecycle
-                operator: In
-                values:
-                - ondemand
 {{- if .Values.ipForwardInitContainer }}
       initContainers:
         - args:
@@ -44,7 +35,7 @@ spec:
             - sysctl -w net.ipv4.ip_forward=1
           command:
             - /bin/sh
-          image: busybox:1.29
+          image: arm64v8/busybox:1.35
           imagePullPolicy: IfNotPresent
           name: sysctl
           resources:

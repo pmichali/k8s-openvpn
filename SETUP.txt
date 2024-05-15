@@ -1,0 +1,90 @@
+Using ARM64 based cluster based on k8s 1.29.3.
+
+
+OPENVPN Setup
+-------------
+
+From root of k8s-openvpn area, build openvpn image with newer version and configuration (see modifications)...
+
+  cd build/
+  docker build -f Dockerfile.aarch64 -t ${YOUR_DOCKER_ID}/openvpn:latest .
+  docker login
+
+Provide your Docker access token to log in.
+
+  docker push ${YOUR_DOCKER_ID}/openvpn:latest
+
+
+Update deploy/openvpn/values.yaml as needed for your configuration and save as ${USER}-values.yaml.
+Items to consider:
+    - ExternalPort, if you are forwarding (e.g. DynDNS domain with port).
+    - Set loadBalancerIP you are using in your cluster for openvpn.
+    - Can disable DEFAULT_ROUTE_ENABLED and then specify local network route for server
+    - If you want, in serverConf section, you can:
+        * limit max-clients.
+	* Add DNS server for your lcoal network.
+	* Add public DNS server.
+    - storageClass, if you want to persist (e.g. "longhorn").
+    - OVPN_NETWORK/OVPN_SUBNET to the network you want to use for clients. I used stock kubespray networks.
+
+
+Deploy...
+
+cd ../deploy/openvpn
+helm upgrade --install openvpn . -n k8s-openvpn  -f ${USER}-values.yaml --create-namespace
+
+Wait for pod to come up (may take 10-15 minutes to build all certs)...
+
+kubectl get all -n k8s-openvpn
+
+
+Generate users...
+
+cd ../../manage
+bash create_user.sh USERNAME [DOMAIN-NAME]
+
+This will create USERNAME.ovpn that can be imported into a client (e.g. OpenVPN Client). the server
+IP will be the public IP of the OpenVPN service.
+
+Alternately, you can provide a domain name as well. For example, you can have a domain that redirects
+to your home's dynamic IP address (using something like DynDNS), and then on your router, redirect
+requests for the port you are using, to the IP of the OpenVPN service.
+
+
+
+Modifications Made
+------------------
+
+Dockerfile.aarch64
+    - Using newer alpine image (based on edge tag 20240329)
+    - Updated repo added, to use the newer test repo location - main and community already exist.
+
+
+config-openvpn.yaml changes:
+    - Removed client config settings that were generating warning log messages with opt-verify set.
+    - Setting auth to sha512 on client and server.
+    - Disabled allowing compression on server and used of compression (security risk).
+    - Added settings that were on client to server for mute, user, group, etc.
+    - Set opt-verify for testing, but then commented out, as it is deprecated.
+    - Specifying TLS min 1.2 on server.
+
+openvpn-deployment.yaml changes:
+    - Turned off node affinity for lifecyle=ondemand. Does not exist on my bare metal cluster.
+    - Newer busybox version 1.35 for init container.
+
+values.yaml:
+    - Using my docker hub repo image for openvpn.
+    - Altered ports used for loadbalancer service (arbitrary) and fixed IP.
+    - Using Longhorn for storage class.
+    - Using different client network (arbitrary).
+    - Using udp protocol.
+    - Changed K8s pod and service subnets to match what I use (arbitrary).
+    - Set to redirect all traffic through gateway.
+    - Using AES-256-CBC as default cipher.
+    - Pushed route for DNS servers I wanted.
+
+create_user.sh
+    - Allow to pass domain name vs using published service IP.
+    - Fixed namespace.
+    - Fixed kubectl exec syntax for newer K8s.
+

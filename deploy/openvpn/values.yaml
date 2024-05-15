@@ -10,8 +10,8 @@ updateStrategy:
 # imagePullSecretName:
 
 image:
-  repository: k4kratik/openvpn
-  tag: v1
+  repository: pmichali/openvpn
+  tag: latest
   pullPolicy: IfNotPresent
 service:
   type: LoadBalancer
@@ -63,7 +63,7 @@ persistence:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  # storageClass: "-"
+  storageClass: "longhorn"
   accessMode: ReadWriteOnce
   size: 2M
 openvpn:
@@ -72,14 +72,14 @@ openvpn:
   # Network subnet allocated for openvpn client (default: 255.255.0.0).
   OVPN_SUBNET: 255.255.0.0
   # Protocol used by openvpn tcp or udp (default: udp).
-  OVPN_PROTO: tcp
+  OVPN_PROTO: udp
   # Kubernetes pod network (optional).
-  OVPN_K8S_POD_NETWORK: "100.66.0.0"
+  OVPN_K8S_POD_NETWORK: "10.233.64.0"
   # Kubernetes pod network subnet (optional).
-  OVPN_K8S_POD_SUBNET: "255.255.128.0"
+  OVPN_K8S_POD_SUBNET: "255.255.192.0"
   # Kubernetes service network (optional).
   # Define openvpn.OVPN_K8S_SVC_NETWORK and openvpn.OVPN_K8S_SVC_SUBNET if it's needed to create a separate route to Kubernates service subnet
-  OVPN_K8S_SVC_NETWORK: "100.76.0.0"
+  OVPN_K8S_SVC_NETWORK: "10.233.0.0"
   # Kubernetes service network subnet (optional).
   OVPN_K8S_SVC_SUBNET: "255.255.192.0"
   # Set default route which openvpn figures basing on network routes inside openvpn pod
@@ -92,19 +92,20 @@ openvpn:
   # Push a `dhcp-option DOMAIN` config
   dhcpOptionDomain: true
   # Redirect all client traffic through VPN
-  redirectGateway: false
+  redirectGateway: true
   # Use/generate certificate revocation list
   useCrl: true
   # Use/generate a ta.key (https://openvpn.net/community-resources/hardening-openvpn-security/)
   taKey: true
   # Override default cipher
-  cipher: AES-256-GCM
+  cipher: AES-256-CBC
   # Lines appended to the end of the server configuration file
-  #  max-clients 100
   serverConf: |
-    push "route 172.22.0.0 255.255.0.0"
-    push "route 169.254.20.10 255.255.255.255"
-    duplicate-cn
+    ; max-clients 5
+    ; push "dhcp-option DNS YOUR-LOCAL-DNS-SERVER"
+    ; push "dhcp-option DNS PUBLIC-DNS-SERVER-IP"
+    push "redirect-gateway def1"
+    # duplicate-cn
 
   management:
     enabled: true
