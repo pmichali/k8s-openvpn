@@ -104,7 +104,6 @@ openvpn:
     ; max-clients 5
     ; push "dhcp-option DNS YOUR-LOCAL-DNS-SERVER"
     ; push "dhcp-option DNS PUBLIC-DNS-SERVER-IP"
-    push "redirect-gateway def1"
     # duplicate-cn
 
   management:
